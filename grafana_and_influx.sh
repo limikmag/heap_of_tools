@@ -8,6 +8,7 @@ function usage() {
   echo "  -d  delete env"
   echo "  -s  setup env"
   echo "  -w  python code workspace directory"
+  echo "  -m  setup from scratch only container for metric scrapping"
   echo -e "  -v  password vault to decrypt secrets\n"
   exit 1
 }
@@ -54,12 +55,13 @@ function run_env() {
 
 [ $# -eq 0 ] && usage
 
-while getopts ":dsw:v:" opt; do
+while getopts ":dsw:v:m" opt; do
   case $opt in
     s) SETUP=yes;;
     w) WORKSPACE="$OPTARG";;
     v) password="$OPTARG";;
     d) DELETE=yes;;
+    m) SETUP_ONLY_METRIC=yes;;
     \?) error "Invalid option: -$OPTARG";;
     *) usage;;
   esac
@@ -72,6 +74,25 @@ then
     [ -z "${password}" ] && error "Password vault unset"
     clean_env
     run_env
+fi
+
+
+if [ -n "$SETUP_ONLY_METRIC" ];
+then
+    [ -z "${WORKSPACE}" ] && error "Workspace directory unset"
+    [ -z "${password}" ] && error "Password vault unset"
+    echo -e "Cleaning metric scrapper\n"
+    docker kill metric-scrapper
+    docker container prune -f
+    echo -e "Setuping from scratch metric scrapper\n"
+    docker run -d --name metric-scrapper \
+    --env password=${password} \
+    -v ${WORKSPACE}:/root/metric-scrapper \
+    --network=grafana python:3.7 /bin/bash -c "
+    cd /root/metric-scrapper;
+    pip install -r requirements.txt;
+    python metric-scrapper.py"
+    
 fi
 
 
