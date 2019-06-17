@@ -2,6 +2,7 @@
 
 
 function install_git() {
+   sudo yum update -y nss curl libcurl
    wget https://github.com/git/git/archive/v2.21.0.tar.gz -O /tmp/git.tar.gz
    cd /tmp   
    tar -zxf git.tar.gz
